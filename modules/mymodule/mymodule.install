@@ -1,0 +1,23 @@
+<?php
+
+/**
+ * @file
+ * installing of module
+ */
+
+/**
+ * implementation h hook_imstall
+ */
+function mymodule_install(){
+	variable_set('title','please enter title here');
+	$t = get_t();
+	drupal_set_message($t('variables have been set up'));
+}
+
+function mymodule_uninstall(){
+	variable_del('title');
+
+	$t = get_t();
+	drupal_set_message($t('variables have been unset'));
+
+}
