@@ -1,0 +1,267 @@
+<?php
+
+/**
+ * load by id hardcoding
+ * 
+ */
+function load_id_function(){
+  
+  $nid = 30; // The node to update
+  $node = node_load($nid); // ...where $nid is the node id
+  return node_view($node);
+}
+
+
+/**
+ * hook_help implementation
+ * 
+ */
+function mymodule_help($path, $arg){
+
+	switch($path){
+
+		case 'admin/help#mymodule':{
+
+			$ret_val = '<h3>' . t('About') . '</h3>';
+			$ret_val = '<p>' . t('module developed my me') . '</p>';
+
+			return $ret_val;
+			break;
+		}
+	}
+}
+
+/**
+ * hook_permission  description 
+ * 
+ */
+
+function mymodule_permission(){
+	return array(
+		'modules' => array(
+			'title' => t('administative module'),
+			'description' => t('permisssions are stated here'),
+			),
+	);
+}
+
+/**
+ * hook_form implementation
+ */
+function module_admin_settings_form($node, &$form_state) {
+  
+  $form = array();
+
+  $form['center'] = array(
+    '#title' => t('Details'),
+    '#type'=>'fieldset',
+    '#collapsible'=> TRUE,
+    '#collapsed'=>FALSE,
+    );
+
+  $form['center']['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title'),
+    '#required' => TRUE,
+    '#weight' => -5,
+    '#default_value' =>variable_get('title'),
+  );
+
+  $form['center']['field1'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Name',
+    '#maxlength' => 200,
+  );
+  $form['selectbox'] = array(
+    '#type' => 'select',
+    '#title' => t('Select box'),
+    '#options' => array(
+      1 => 'A',
+      2 => 'B',
+      3 => 'C',
+    ),
+    '#description' => t('Choose an option.'),
+  );
+
+  return system_settings_form($form);
+}
+
+
+/**
+ * form validate implementation
+ */
+function module_admin_settings_form_validate($form, &$form_state) {
+
+    // dpm($form_state);
+
+    $title = $form_state['values']['title'];
+    $field= $form_state['values']['field1'];
+    if(strlen($title) <= 3){
+      form_set_error('title', t('title should be greater than 3'));
+    }
+    if(empty($field)){
+      form_set_error('field1',t('please enter the Name field properly'));/**/
+    }
+}
+
+
+/**
+ * hook_menu implememntation
+ * 
+ */
+function mymodule_menu(){
+	$item = array();
+	
+	$item['admin/config/mymodule'] = array(
+		'title'=> 'my module',
+		'description'=>'my module configurtion',
+		'access arguments' => array('modules'),
+		);
+
+	$item['admin/config/mymodule/manage'] = array(
+		'title'=> 'my module config',
+		'description'=>'my module configurtion and settings',
+		'access arguments' => array('modules'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('module_admin_settings_form'),
+		);
+
+
+  $item['hello'] = array(
+    'title' => 'Hello world',
+    'page callback' => 'mymodule_page',
+    'access callback' => TRUE,
+  );
+
+  $item['load'] = array(
+  'title' => 'Load node based on title',
+  'page callback' => 'load_function',
+  'access callback' => TRUE,
+  );
+
+  $item['loadById'] = array(
+  'title' => 'Load node by id',
+  'page callback' => 'load_id_function',
+  'access callback' => TRUE,
+  );
+
+	return $item;
+}
+
+/**
+ * hook_form implementation
+ */
+function mymodule_form() {
+
+  return drupal_get_form('form_submittion');
+}
+
+/**
+ * function called on submittion of form
+ */
+function form_submittion($form_state) {
+
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title'),
+    '#required' => TRUE,
+    '#default_value' => "Title",
+    '#size' => 20,
+    '#maxlength' => 20,
+  );
+
+  $form['body'] = array(
+    '#type' => 'textarea',
+    '#cols' => 70,
+    '#title' => t('Body'),
+  );
+
+    $form['id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Node ID'),
+    '#size' => 20,
+    '#required' => TRUE,
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Submit',
+  );
+
+  return $form;
+}
+
+// Adds a submit handler/function to our form to send a successful 
+// completion message to the screen.
+function form_submittion_submit($form, &$form_state) {
+  $node = new stdClass;
+  $node->type = 'page';
+  node_object_prepare($node);
+  $node->language = LANGUAGE_NONE;
+
+  $node->title = $form_state['values']['title'];
+  $node->body[$node->language][0]['value'] = $form_state['values']['body'];
+  $node->id = $form_state['values']['id'];
+  $path = 'display/'.$node->id;
+  $node->path = array('alias' => $path);
+
+  node_save($node);
+
+   $form_state['redirect'] = 'display/' .$node->id;
+}
+
+/**
+ * function for dispalying on /hello page
+ */
+function mymodule_page() {
+ $name = t('Welcome to world of DRUPAL');
+  $output = render($name);
+  return $output;
+}
+
+/**
+ *
+ * hook_entity_load implementation
+ */
+function load_function(){
+
+  $title ="test";
+  $query = new EntityFieldQuery();
+
+  $query->entityCondition('entity_type', 'node')
+        ->propertyCondition('title', $title);
+
+  $result = $query->execute();
+
+  $output = $result['node'];
+   foreach ($output as $object) {
+       $nid = $object->nid;
+   }
+  $node = node_load($nid);
+  return node_view($node);
+}
+
+/**
+ * block implementation
+ */
+function mymodule_block_info() {
+
+  $blocks = array();
+
+  $blocks['mymodule_form'] = array(
+    'info' => t('My module block'),
+    'cache' => DRUPAL_CACHE_GLOBAL,
+    );
+  return $blocks;
+}
+
+function mymodule_block_view($delta ='') {
+    $block = array();
+    switch($delta) {
+      case 'mymodule_form':
+      $block['subject'] = t('My module display');
+      $block['content'] = mymodule_form();
+      break;
+    }
+    return $block;
+}
